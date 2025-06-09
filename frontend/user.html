@@ -1,0 +1,107 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fizod - Foydalanuvchi Paneli</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <img id="userImage" src="https://via.placeholder.com/40" alt="Foydalanuvchi rasmi">
+      <div class="menu-icon" onclick="toggleMenu()">☰</div>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="#" onclick="openSettings()">Sozlash</a>
+        <a href="#" id="logout">Chiqish</a>
+      </div>
+    </div>
+    <h1>Fizod Foydalanuvchi Paneli</h1>
+  </header>
+  <div class="container">
+    <h2>Mahsulotlar</h2>
+    <div class="products" id="productList"></div>
+    
+    <h2>Sotish</h2>
+    <form id="sellForm">
+      <input type="text" id="productName" placeholder="Mahsulot nomi" required>
+      <input type="number" id="productPrice" placeholder="Narxi (UZS)" required>
+      <input type="number" id="productQuantity" placeholder="Zahira soni" required min="1">
+      <textarea id="productDescription" placeholder="Tavsif" required></textarea>
+      <input type="file" id="productImage" accept="image/*" required>
+      <button type="submit">Mahsulot qo'shish</button>
+    </form>
+    
+    <h2>Savat</h2>
+    <div id="cartList"></div>
+    <button id="orderButton" style="display: none;">Buyurtma berish</button>
+    <div id="orderForm" style="display: none;">
+      <h3>Yetkazib berish ma'lumotlari</h3>
+      <input type="text" id="addressSearch" placeholder="Manzil qidirish (masalan, Toshkent, Chilanzar)">
+      <input type="tel" id="phoneNumber" placeholder="Telefon raqami" required>
+      <div id="map" style="height: 400px; margin: 1em 0;"></div>
+      <button onclick="confirmOrder()">Buyurtmani tasdiqlash</button>
+    </div>
+    <p id="orderMessage" class="success" style="display: none;">Buyurtma muvaffaqiyatli yuborildi!</p>
+    
+    <h2>Buyurtmalarim</h2>
+    <div id="myOrders"></div>
+  </div>
+  
+  <div class="modal" id="settingsModal" style="display: none;">
+    <div class="modal-content">
+      <h2>Sozlash</h2>
+      <form id="settingsForm">
+        <input type="text" id="settingsUsername" placeholder="Foydalanuvchi nomi" required>
+        <input type="password" id="settingsPassword" placeholder="Yangi parol" required>
+        <input type="file" id="settingsImage" accept="image/*">
+        <button type="submit">Saqlash</button>
+        <button type="button" onclick="closeSettings()">Yopish</button>
+      </form>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

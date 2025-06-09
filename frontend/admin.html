@@ -1,0 +1,95 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fizod - Admin Paneli</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <img id="userImage" src="https://via.placeholder.com/40" alt="Admin rasmi">
+      <div class="menu-icon" onclick="toggleMenu()">☰</div>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="#" onclick="openSettings()">Sozlash</a>
+        <a href="#" id="logout">Chiqish</a>
+      </div>
+    </div>
+    <h1>Fizod Admin Paneli</h1>
+  </header>
+  <div class="container">
+    <h2>Mahsulotlarni boshqarish</h2>
+    <form id="addProductForm">
+      <input type="text" id="adminProductName" placeholder="Mahsulot nomi" required>
+      <input type="number" id="adminProductPrice" placeholder="Narxi (UZS)" required>
+      <input type="number" id="adminProductQuantity" placeholder="Zahira soni" required min="1">
+      <textarea id="adminProductDescription" placeholder="Tavsif" required></textarea>
+      <input type="file" id="adminProductImage" accept="image/*" required>
+      <button type="submit">Mahsulot qo'shish</button>
+    </form>
+    <h3>Mahsulotlar ro'yxati</h3>
+    <div id="adminProductList"></div>
+    
+    <h2>Foydalanuvchilarni boshqarish</h2>
+    <div id="userList"></div>
+    
+    <h2>Buyurtmalar</h2>
+    <div id="orderList"></div>
+  </div>
+  
+  <div class="modal" id="settingsModal" style="display: none;">
+    <div class="modal-content">
+      <h2>Sozlash</h2>
+      <form id="settingsForm">
+        <input type="text" id="settingsUsername" placeholder="Foydalanuvchi nomi" required>
+        <input type="password" id="settingsPassword" placeholder="Yangi parol" required>
+        <input type="file" id="settingsImage" accept="image/*">
+        <button type="submit">Saqlash</button>
+        <button type="button" onclick="closeSettings()">Yopish</button>
+      </form>
+    </div>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>
